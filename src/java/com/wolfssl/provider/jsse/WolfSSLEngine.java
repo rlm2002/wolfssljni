@@ -38,6 +38,10 @@ import java.util.Arrays;
 import java.util.ArrayList;
 import java.util.logging.Level;
 import java.security.cert.CertificateEncodingException;
+
+import javax.net.ssl.SNIHostName;
+import javax.net.ssl.SNIMatcher;
+import javax.net.ssl.SNIServerName;
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLEngineResult;
 import javax.net.ssl.SSLEngineResult.HandshakeStatus;
@@ -461,6 +465,11 @@ public class WolfSSLEngine extends SSLEngine {
                     WolfSSLDebug.log(getClass(), WolfSSLDebug.INFO,
                         "ssl.accept() ret:err = " + ret + " : " +
                         ssl.getError(ret));
+
+                    if (!this.engineHelper.matchSNI()) {
+                        throw new SSLHandshakeException(
+                            "Unrecognized server name in SNI extension");
+                    }
                 }
             }
 
