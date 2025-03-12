@@ -30,6 +30,8 @@ import java.net.InetAddress;
 import java.net.SocketException;
 import java.net.SocketTimeoutException;
 import javax.net.ssl.SSLSocket;
+import javax.net.ssl.SNIMatcher;
+import javax.net.ssl.SNIServerName;
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLException;
 import javax.net.ssl.X509TrustManager;
@@ -1513,6 +1515,36 @@ public class WolfSSLEngineHelper {
         /* Check if legacy DH is enabled through system properties. */
         String dhKeySize = System.getProperty("jdk.tls.ephemeralDHKeySize");
         return "legacy".equals(dhKeySize);
+    }
+
+    protected boolean matchSNI(){
+        List <SNIMatcher> matchers = this.params.getSNIMatchers();
+        boolean match = false;
+        if (matchers != null && !matchers.isEmpty()) {
+            /* Match a server name to SNI requested by Client */
+            List <SNIServerName> serverNames = this.getSession()
+                                                    .getRequestedServerNames();
+            if (serverNames != null && !serverNames.isEmpty()) {
+                for (SNIServerName serverName : serverNames) {
+                    if (serverName.getType() == WolfSSL.WOLFSSL_SNI_HOST_NAME) {
+                        for (SNIMatcher matcher : matchers) {
+                            if (matcher.matches(serverName)) {
+                                WolfSSLDebug.log(getClass(), WolfSSLDebug.INFO,
+                                    "Accepted SNI: " + serverName);
+                                    match = true;
+                            }
+                        }
+                    }
+                }
+            } else {
+                match = false;
+            }
+        } else {
+            WolfSSLDebug.log(getClass(), WolfSSLDebug.INFO,
+                "No SNIMatchers set, not matching SNI");
+            match = true;
+        }
+        return match;
     }
 
     /**

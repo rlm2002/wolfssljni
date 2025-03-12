@@ -25,7 +25,11 @@ import java.lang.reflect.InvocationTargetException;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
 import javax.net.ssl.SSLParameters;
+
+import com.wolfssl.WolfSSLDebug;
 import com.wolfssl.provider.jsse.WolfSSLJDK8Helper;
+
+import com.wolfssl.WolfSSLDebug;
 
 /**
  * WolfSSLParametersHelper class
@@ -39,6 +43,8 @@ public class WolfSSLParametersHelper
     private static Method setApplicationProtocols = null;
     private static Method getEndpointIdentificationAlgorithm = null;
     private static Method setEndpointIdentificationAlgorithm = null;
+    private static Method getSNIMatchers = null;
+    private static Method setSNIMatchers = null;
     private static Method getMaximumPacketSize = null;
     private static Method setMaximumPacketSize = null;
 
@@ -76,6 +82,12 @@ public class WolfSSLParametersHelper
                                     continue;
                                 case "setEndpointIdentificationAlgorithm":
                                     setEndpointIdentificationAlgorithm = m;
+                                    continue;
+                                case "getSNIMatchers":
+                                    getSNIMatchers = m;
+                                    continue;
+                                case "setSNIMatchers":
+                                    setSNIMatchers = m;
                                     continue;
                                 case "getMaximumPacketSize":
                                     getMaximumPacketSize = m;
@@ -126,7 +138,7 @@ public class WolfSSLParametersHelper
          * do not existing in older JDKs. Since older JDKs will not have them,
          * use Java reflection to detect availability in helper class. */
         if (setServerNames != null || setApplicationProtocols != null ||
-            setEndpointIdentificationAlgorithm != null) {
+            setEndpointIdentificationAlgorithm != null || setSNIMatchers != null) {
 
             try {
                 /* load WolfSSLJDK8Helper at runtime, not compiled
@@ -154,6 +166,14 @@ public class WolfSSLParametersHelper
                         "setEndpointIdentificationAlgorithm", paramList);
                     mth.invoke(obj, ret,
                         setEndpointIdentificationAlgorithm, in);
+                }
+                if (setSNIMatchers != null) {
+                    mth = cls.getDeclaredMethod("setSNIMatchers", paramList);
+                    mth.invoke(obj, ret, setSNIMatchers, in);
+                }
+                if (setSNIMatchers != null) {
+                    mth = cls.getDeclaredMethod("setSNIMatchers", paramList);
+                    mth.invoke(obj, ret, setSNIMatchers, in);
                 }
 
             } catch (Exception e) {
@@ -222,7 +242,7 @@ public class WolfSSLParametersHelper
          * do not existing in older JDKs. Since older JDKs will not have them,
          * use Java reflection to detect availability in helper class. */
         if (getServerNames != null || getApplicationProtocols != null ||
-            getEndpointIdentificationAlgorithm != null) {
+            getEndpointIdentificationAlgorithm != null || getSNIMatchers != null) {
             try {
                 /* load WolfSSLJDK8Helper at runtime, not compiled on older JDKs */
                 Class<?> cls = Class.forName(
@@ -232,6 +252,8 @@ public class WolfSSLParametersHelper
                 paramList[0] = javax.net.ssl.SSLParameters.class;
                 paramList[1] = com.wolfssl.provider.jsse.WolfSSLParameters.class;
                 Method mth = null;
+
+                WolfSSLDebug.log(cls, WolfSSLDebug.INFO, "rlm import params");
 
                 if (getServerNames != null) {
                     mth = cls.getDeclaredMethod("getServerNames", paramList);
@@ -247,10 +269,20 @@ public class WolfSSLParametersHelper
                         "getEndpointIdentificationAlgorithm", paramList);
                     mth.invoke(obj, in, out);
                 }
+                if (getSNIMatchers != null){
+                    mth = cls.getDeclaredMethod("getSNIMatchers", paramList);
+                    mth.invoke(obj, in, out);
+                }
+                if (getSNIMatchers != null){
+                    mth = cls.getDeclaredMethod("getSNIMatchers", paramList);
+                    mth.invoke(obj, in, out);
+                }
 
             } catch (Exception e) {
                 /* ignore, class not found */
             }
+
+            out.setSNIMatchers(in.getSNIMatchers());
         }
 
         /* Methods added in later versions of SSLParameters which do not

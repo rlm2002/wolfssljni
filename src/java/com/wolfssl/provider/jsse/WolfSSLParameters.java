@@ -21,7 +21,13 @@
 package com.wolfssl.provider.jsse;
 
 import java.util.List;
+
+import javax.net.ssl.SNIMatcher;
+
+import com.wolfssl.WolfSSLDebug;
+
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 
 /**
@@ -45,6 +51,7 @@ final class WolfSSLParameters {
     private boolean needClientAuth = false;
     private String endpointIdAlgorithm = null;
     private List<WolfSSLSNIServerName> serverNames;
+    private List<SNIMatcher> sniMatchers;
     private boolean useCipherSuiteOrder = true;
     String[] applicationProtocols = new String[0];
     private boolean useSessionTickets = false;
@@ -60,6 +67,7 @@ final class WolfSSLParameters {
         cp.wantClientAuth = this.wantClientAuth;
         cp.needClientAuth = this.needClientAuth;
         cp.setServerNames(this.getServerNames());
+        cp.setSNIMatchers(this.getSNIMatchers());
         cp.useSessionTickets = this.useSessionTickets;
         cp.endpointIdAlgorithm = this.endpointIdAlgorithm;
         cp.setApplicationProtocols(this.applicationProtocols);
@@ -72,6 +80,7 @@ final class WolfSSLParameters {
 
         /* TODO: duplicate other properties here when WolfSSLParameters
          * can handle them */
+
 
         return cp;
     }
@@ -184,14 +193,25 @@ final class WolfSSLParameters {
     }
 
     /* TODO, create our own class for SNIMatcher, in case Java doesn't support it */
-    //void setSNIMatchers(Collection<SNIMatcher> matchers) {
-    //    /* TODO */
-    //}
+    void setSNIMatchers(Collection<SNIMatcher> matchers) {
+        if (matchers != null && !matchers.isEmpty()) {
+            for (SNIMatcher matcher : matchers) {
+                this.sniMatchers.add(matcher);
+            }
+        } else {
+            this.sniMatchers =new ArrayList<SNIMatcher>();
+        }
+    }
 
     /* TODO, create our own class for SNIMatcher, in case Java doesn't support it */
-    //Collection<SNIMatcher> getSNIMatchers() {
-    //    return null; /* TODO */
-    //}
+    List<SNIMatcher> getSNIMatchers() {
+        if (this.sniMatchers != null && !this.sniMatchers.isEmpty()) {
+                return Collections.unmodifiableList(new ArrayList<SNIMatcher>(sniMatchers));
+        } else {
+            return Collections.emptyList();
+        }
+        
+    }
 
     void setUseCipherSuitesOrder(boolean honorOrder) {
         this.useCipherSuiteOrder = honorOrder;
