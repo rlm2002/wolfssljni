@@ -68,6 +68,9 @@ public class WolfSSLContext {
     private WolfSSLPskClientCallback internPskClientCb = null;
     private WolfSSLPskServerCallback internPskServerCb = null;
 
+    /* have session tickets been enabled for this context? Default to false. */
+    private boolean sessionTicketsEnabled = false;
+
     /* is this context active, or has it been freed? */
     private boolean active = false;
 
@@ -388,6 +391,7 @@ public class WolfSSLContext {
     private native int useCertificateChainBuffer(long ctx, byte[] in, long sz);
     private native int useCertificateChainBufferFormat(long ctx, byte[] in,
             long sz, int format);
+    private native int useSessionTicket(long ctx);
     private native int setGroupMessages(long ctx);
     private native void setIORecv(long ctx);
     private native void setIOSend(long ctx);
@@ -593,6 +597,62 @@ public class WolfSSLContext {
         }
     }
 
+    /**
+     * Enable session tickets at the context level.
+     *
+     * <p>This enables session ticket support for all SSL sessions created from this
+     * context. When used on a server, it establishes a single, shared ticket
+     * encryption key, allowing for session resumption across different client
+     * connections. This should be called before any SSL sessions are created
+     * from this context.</p>
+     *
+     * @return <code>WolfSSL.SSL_SUCCESS</code> on success, or a negative value on error.
+     * Will return <code>WolfSSL.NOT_COMPILED_IN</code> if the underlying
+     * native library was not built with session ticket support.
+     * @throws IllegalStateException if the WolfSSLContext has been freed.
+     */
+    public int useSessionTicket() throws IllegalStateException {
+        int ret;
+        confirmObjectIsActive();
+
+        synchronized (ctxLock) {
+            WolfSSLDebug.log(getClass(), WolfSSLDebug.Component.JNI,
+                WolfSSLDebug.INFO, getContextPtr(),
+                () -> "entered useSessionTicket()");
+
+            ret = useSessionTicket(getContextPtr());
+
+            if (ret == WolfSSL.SSL_SUCCESS){
+                this.sessionTicketsEnabled = true;
+            }
+
+            WolfSSLDebug.log(getClass(), WolfSSLDebug.Component.JNI,
+                WolfSSLDebug.INFO, this.sslCtxPtr,
+                () -> "enabled session tickets for context, ret: " + ret);
+            return ret;
+        }
+    }
+
+    /**
+     * Determine if session tickets have been enabled for this session.
+     * Session tickets can be enabled for this session by calling
+     * WolfSSLSession.useSessionTicket().
+     *
+     * @return true if enabled, otherwise false.
+     * @throws IllegalStateException WolfSSLSession has been freed
+     */
+    public synchronized boolean sessionTicketsEnabled()
+        throws IllegalStateException {
+
+        confirmObjectIsActive();
+
+        WolfSSLDebug.log(getClass(), WolfSSLDebug.Component.JNI,
+            WolfSSLDebug.INFO, this.sslCtxPtr,
+            () -> "entered sessionTicketsEnabled(): " +
+            this.sessionTicketsEnabled);
+
+        return this.sessionTicketsEnabled;
+    }
 
     /**
      * Sets the verification method for remote peers and also allows a

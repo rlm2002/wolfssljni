@@ -185,6 +185,14 @@ JNIEXPORT jint JNICALL Java_com_wolfssl_WolfSSLContext_useCertificateChainBuffer
 
 /*
  * Class:     com_wolfssl_WolfSSLContext
+ * Method:    useSessionTicket
+ * Signature: (J)I
+ */
+JNIEXPORT jint JNICALL Java_com_wolfssl_WolfSSLContext_useSessionTicket
+  (JNIEnv *, jobject, jlong);
+
+/*
+ * Class:     com_wolfssl_WolfSSLContext
  * Method:    setGroupMessages
  * Signature: (J)I
  */
