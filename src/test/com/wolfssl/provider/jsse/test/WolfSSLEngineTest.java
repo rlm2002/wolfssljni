@@ -70,6 +70,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.CyclicBarrier;
 import java.util.concurrent.BrokenBarrierException;
 import java.util.concurrent.atomic.AtomicIntegerArray;
+import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.fail;
@@ -3346,6 +3347,77 @@ public class WolfSSLEngineTest {
         if (!Arrays.equals(marker, drained)) {
             fail("drained output does not match injected queue");
         }
+    }
+
+    /* Regression: closeOutbound() before handshake must also close
+     * inbound, otherwise isInboundDone() never returns true. */
+    @Test
+    public void testCloseOutboundBeforeHandshake() throws Exception {
+        this.ctx = tf.createSSLContext("TLS", engineProvider);
+        SSLEngine e = this.ctx.createSSLEngine();
+        e.setUseClientMode(true);
+        e.closeOutbound();
+        assertTrue(e.isOutboundDone());
+        assertTrue(e.isInboundDone());
+    }
+
+    /* Regression for wrap(ByteBuffer[], ofst, len, out) when ofst > 0:
+     * pos[]/limit[] OOB and null-check loop bound. */
+    @Test
+    public void testWrapWithBufferArrayOffset() throws Exception {
+        this.ctx = tf.createSSLContext("TLS", engineProvider);
+        SSLEngine server = this.ctx.createSSLEngine();
+        SSLEngine client = this.ctx.createSSLEngine("wolfSSL test", 11111);
+        server.setUseClientMode(false);
+        client.setUseClientMode(true);
+        server.beginHandshake();
+        client.beginHandshake();
+        assertEquals(0, tf.testConnection(server, client, null, null, "x"));
+
+        byte[] payload = "real-payload".getBytes();
+        ByteBuffer[] in = {ByteBuffer.wrap("DECOY".getBytes()),
+            ByteBuffer.wrap(payload)};
+        ByteBuffer net = ByteBuffer.allocateDirect(
+            client.getSession().getPacketBufferSize());
+
+        SSLEngineResult r = client.wrap(in, 1, 1, net);
+        assertEquals(SSLEngineResult.Status.OK, r.getStatus());
+        assertEquals(0, in[0].position());
+        assertEquals(payload.length, in[1].position());
+
+        net.flip();
+        ByteBuffer plain = ByteBuffer.allocate(
+            server.getSession().getApplicationBufferSize());
+        assertEquals(SSLEngineResult.Status.OK,
+            server.unwrap(net, plain).getStatus());
+        plain.flip();
+        byte[] got = new byte[plain.remaining()];
+        plain.get(got);
+        assertArrayEquals(payload, got);
+    }
+
+    /* Direct regression: wrap() null-check must reach in[ofst+len-1]. */
+    @Test(expected = SSLException.class)
+    public void testWrapRejectsNullAtOffset() throws Exception {
+        this.ctx = tf.createSSLContext("TLS", engineProvider);
+        SSLEngine c = this.ctx.createSSLEngine("wolfSSL test", 11111);
+        c.setUseClientMode(true);
+        ByteBuffer[] in = {ByteBuffer.wrap("x".getBytes()), null};
+        c.wrap(in, 1, 1, ByteBuffer.allocateDirect(
+            c.getSession().getPacketBufferSize()));
+    }
+
+    /* Direct regression: unwrap() readOnly-check must reach
+     * out[ofst+length-1]. */
+    @Test(expected = java.nio.ReadOnlyBufferException.class)
+    public void testUnwrapRejectsReadOnlyAtOffset() throws Exception {
+        this.ctx = tf.createSSLContext("TLS", engineProvider);
+        SSLEngine s = this.ctx.createSSLEngine();
+        s.setUseClientMode(false);
+        ByteBuffer[] out = {ByteBuffer.allocate(64),
+            ByteBuffer.allocate(64).asReadOnlyBuffer()};
+        s.unwrap(ByteBuffer.allocateDirect(
+            s.getSession().getPacketBufferSize()), out, 1, 1);
     }
 }
 
