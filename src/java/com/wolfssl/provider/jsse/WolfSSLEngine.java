@@ -2093,7 +2093,7 @@ public class WolfSSLEngine extends SSLEngine {
 
         /* If handshake has not started yet, close inBound as well */
         if (needInit) {
-            inBoundOpen = true;
+            inBoundOpen = false;
         }
 
         /* Update status based on internal state. Some calling applications
