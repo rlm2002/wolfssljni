@@ -1392,7 +1392,7 @@ public class WolfSSLEngine extends SSLEngine {
             throw new IndexOutOfBoundsException();
         }
 
-        for (i = ofst; i < length; ++i) {
+        for (i = ofst; i < ofst + length; ++i) {
             if (out[i] == null) {
                 throw new IllegalArgumentException(
                     "SSLEngine.unwrap() bad arguments");
