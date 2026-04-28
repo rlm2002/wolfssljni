@@ -828,7 +828,7 @@ public class WolfSSLEngine extends SSLEngine {
             throw new IndexOutOfBoundsException();
         }
 
-        for (i = ofst; i < len; ++i) {
+        for (i = ofst; i < ofst + len; ++i) {
             if (in[i] == null) {
                 throw new SSLException("SSLEngine.wrap() bad arguments");
             }
