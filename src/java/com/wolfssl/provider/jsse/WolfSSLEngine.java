@@ -742,8 +742,8 @@ public class WolfSSLEngine extends SSLEngine {
         /* Get total input data size, store input array positions */
         for (i = ofst; i < ofst + len; i++) {
             totalIn += in[i].remaining();
-            pos[i] = in[i].position();
-            limit[i] = in[i].limit();
+            pos[i - ofst] = in[i].position();
+            limit[i - ofst] = in[i].limit();
         }
 
         /* Allocate static buffer for application data, clear before use */
@@ -765,7 +765,7 @@ public class WolfSSLEngine extends SSLEngine {
             in[i].limit(in[i].position() + bufChunk);       /* set limit */
             this.staticAppDataBuf.put(in[i]);               /* get data */
             inputLeft -= bufChunk;
-            in[i].limit(limit[i]);                          /* reset limit */
+            in[i].limit(limit[i - ofst]);                   /* reset limit */
 
             if (inputLeft == 0) {
                 break; /* reached data size needed, stop reading */
@@ -786,7 +786,7 @@ public class WolfSSLEngine extends SSLEngine {
         if (ret <= 0) {
             /* error, reset in[] positions for next call */
             for (i = ofst; i < ofst + len; i++) {
-                in[i].position(pos[i]);
+                in[i].position(pos[i - ofst]);
             }
         }
 
