@@ -1295,7 +1295,8 @@ public class WolfSSLEngine extends SSLEngine {
      * the JSSE contract that BUFFER_UNDERFLOW must report
      * bytesConsumed() == 0.
      *
-     * Skipped if using DTLS.
+     * Handles TLS record headers and DTLS 1.3 unified headers (RFC 9147).
+     * Legacy DTLS records and CID-bearing records fall back to native.
      *
      * @param in input buffer.
      * @param inRemaining bytes remaining in input buffer.
@@ -1304,7 +1305,6 @@ public class WolfSSLEngine extends SSLEngine {
      */
     private boolean peekTlsRecordHeader(ByteBuffer in, int inRemaining) {
         boolean bufferUnderflow = false;
-        /* DTLS still relies on the native WANT_READ path. */
         if (inRemaining > 0 && (this.ssl.dtls() == 0)) {
             int pos = in.position();
             if (inRemaining < WolfSSL.TLS_RECORD_HEADER_LEN) {
@@ -1347,6 +1347,59 @@ public class WolfSSLEngine extends SSLEngine {
                                     "major outside TLS range, skipping " +
                                     "underflow check");
                 }
+            }
+        }
+        else if (inRemaining > 0 && this.ssl.dtls() == 1) {
+            /* WolfJSSE only handles DTLS 1.3 headers at this time. */
+            int pos = in.position();
+            byte headerByte = in.get(pos);
+            if ((headerByte & 0xE0) != 0x20) {
+                /* Not a DTLS 1.3 unified header (likely legacy plaintext
+                 * record during early handshake). Let native handle it. */
+                WolfSSLDebug.log(getClass(), WolfSSLDebug.INFO,
+                                () -> "Peeked first byte outside DTLS 1.3 " +
+                                "unified header range, skipping " +
+                                "underflow check");
+            }
+            else if ((headerByte & 0x10) != 0) {
+                /* Connection ID present: negotiated CID length is not
+                 * tracked in wolfJSSE currently, skip peek. */
+                WolfSSLDebug.log(getClass(), WolfSSLDebug.INFO,
+                                () -> "DTLS 1.3 CID present, skipping " +
+                                "underflow check");
+            }
+            else {
+                int hdrLen = 1;
+                /* Sequence number: 2 bytes if S set, else 1 byte */
+                hdrLen += ((headerByte & 0x08) != 0) ? 2 : 1;
+                if ((headerByte & 0x04) != 0) {
+                    /* Length field present: parse and compare */
+                    hdrLen += 2;
+                    if (inRemaining < hdrLen) {
+                        bufferUnderflow = true;
+                    }
+                    else {
+                        int lenOff = hdrLen - 2;
+                        int recLen =
+                            ((in.get(pos + lenOff) & 0xFF) << 8) |
+                            (in.get(pos + lenOff + 1) & 0xFF);
+                        int packetBufSz =
+                            this.getSession().getPacketBufferSize();
+                        if (recLen <= packetBufSz &&
+                            inRemaining < hdrLen + recLen) {
+                            bufferUnderflow = true;
+                        }
+                        else if (recLen > packetBufSz) {
+                            WolfSSLDebug.log(getClass(), WolfSSLDebug.INFO,
+                                            () -> "DTLS 1.3 recLen: " +
+                                            recLen + " exceeds max packet " +
+                                            "buffer size, skipping " +
+                                            "underflow check.");
+                        }
+                    }
+                }
+                /* L bit clear: record runs to end of datagram, no
+                 * underflow detectable at the SSLEngine boundary. */
             }
         }
         return bufferUnderflow;
@@ -1527,11 +1580,11 @@ public class WolfSSLEngine extends SSLEngine {
                     if (this.handshakeFinished == false) {
                         WolfSSLDebug.log(getClass(), WolfSSLDebug.INFO,
                             () -> "starting or continuing handshake");
+                        /* DTLS records are datagram-bounded; TLS records
+                         * may span unwrap() calls (skip peek if continuing). */
                         if (!this.contPartialRecord) {
-                            /* Client only: TLS 1.3 ssl_accept() I/O callback
-                             * patterns conflict with the pre-peek
-                             * mid-handshake. Post-handshake server unwrap
-                             * always applies peek. */
+                            /* Mid-handshake I/O callback patterns conflict
+                             * with peek; post-handshake always peeks. */
                             bufferUnderflow =
                                 this.getUseClientMode() &&
                                 peekTlsRecordHeader(in, inRemaining);
@@ -1544,14 +1597,19 @@ public class WolfSSLEngine extends SSLEngine {
                         }
                     }
                     else {
-                        if (!this.contPartialRecord) {
+                        if (!this.contPartialRecord || this.ssl.dtls() == 1) {
                             bufferUnderflow =
                                     peekTlsRecordHeader(in, inRemaining);
                         }
 
+                        if (bufferUnderflow) {
+                            /* Truncated record on the wire; any pendingAppData
+                             * stays queued and drains on the next unwrap. */
+                            status = SSLEngineResult.Status.BUFFER_UNDERFLOW;
+                        }
                         /* Serve stashed data from previous
                          * BUFFER_OVERFLOW without calling ssl_read */
-                        if (this.pendingAppData != null &&
+                        else if (this.pendingAppData != null &&
                                 this.pendingAppDataLen > 0) {
                             int outputSpace = getTotalOutputSize(out, ofst,
                                 length);
@@ -1582,9 +1640,6 @@ public class WolfSSLEngine extends SSLEngine {
                                 /* Still not enough output space */
                                 status = SSLEngineResult.Status.BUFFER_OVERFLOW;
                             }
-                        }
-                        else if (bufferUnderflow) {
-                            status = SSLEngineResult.Status.BUFFER_UNDERFLOW;
                         }
                         /* If we have input data, make sure output buffer
                          * length is greater than zero, otherwise ask app to
