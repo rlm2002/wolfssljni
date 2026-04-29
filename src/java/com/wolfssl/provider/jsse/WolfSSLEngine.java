@@ -742,8 +742,8 @@ public class WolfSSLEngine extends SSLEngine {
         /* Get total input data size, store input array positions */
         for (i = ofst; i < ofst + len; i++) {
             totalIn += in[i].remaining();
-            pos[i] = in[i].position();
-            limit[i] = in[i].limit();
+            pos[i - ofst] = in[i].position();
+            limit[i - ofst] = in[i].limit();
         }
 
         /* Allocate static buffer for application data, clear before use */
@@ -765,7 +765,7 @@ public class WolfSSLEngine extends SSLEngine {
             in[i].limit(in[i].position() + bufChunk);       /* set limit */
             this.staticAppDataBuf.put(in[i]);               /* get data */
             inputLeft -= bufChunk;
-            in[i].limit(limit[i]);                          /* reset limit */
+            in[i].limit(limit[i - ofst]);                   /* reset limit */
 
             if (inputLeft == 0) {
                 break; /* reached data size needed, stop reading */
@@ -786,7 +786,7 @@ public class WolfSSLEngine extends SSLEngine {
         if (ret <= 0) {
             /* error, reset in[] positions for next call */
             for (i = ofst; i < ofst + len; i++) {
-                in[i].position(pos[i]);
+                in[i].position(pos[i - ofst]);
             }
         }
 
@@ -828,7 +828,7 @@ public class WolfSSLEngine extends SSLEngine {
             throw new IndexOutOfBoundsException();
         }
 
-        for (i = ofst; i < len; ++i) {
+        for (i = ofst; i < ofst + len; ++i) {
             if (in[i] == null) {
                 throw new SSLException("SSLEngine.wrap() bad arguments");
             }
@@ -850,7 +850,7 @@ public class WolfSSLEngine extends SSLEngine {
             WolfSSLDebug.log(getClass(), WolfSSLDebug.INFO,
                 () -> "setUseClientMode: " +
                 this.engineHelper.getUseClientMode());
-            for (i = 0; i < len; i++) {
+            for (i = ofst; i < ofst + len; i++) {
                 final int idx = i;
                 WolfSSLDebug.log(getClass(), WolfSSLDebug.INFO,
                     () -> "ByteBuffer in["+idx+"].remaining(): " +
@@ -1392,7 +1392,7 @@ public class WolfSSLEngine extends SSLEngine {
             throw new IndexOutOfBoundsException();
         }
 
-        for (i = ofst; i < length; ++i) {
+        for (i = ofst; i < ofst + length; ++i) {
             if (out[i] == null) {
                 throw new IllegalArgumentException(
                     "SSLEngine.unwrap() bad arguments");
@@ -1434,7 +1434,7 @@ public class WolfSSLEngine extends SSLEngine {
                 () -> "in.position(): " + in.position());
             WolfSSLDebug.log(getClass(), WolfSSLDebug.INFO,
                 () -> "in.limit(): " + in.limit());
-            for (i = 0; i < length; i++) {
+            for (i = ofst; i < ofst + length; i++) {
                 final int idx = i;
                 WolfSSLDebug.log(getClass(), WolfSSLDebug.INFO,
                     () -> "out["+idx+"].remaining(): " +
@@ -2093,7 +2093,7 @@ public class WolfSSLEngine extends SSLEngine {
 
         /* If handshake has not started yet, close inBound as well */
         if (needInit) {
-            inBoundOpen = true;
+            inBoundOpen = false;
         }
 
         /* Update status based on internal state. Some calling applications

@@ -4210,5 +4210,107 @@ public class WolfSSLSessionTest {
             }
         }
     }
+
+    /* Regression: read(ByteBuffer) must honor arrayOffset() so a
+     * sliced array-backed buffer reads into backing[arrayOffset+pos),
+     * not backing[pos). */
+    @Test
+    public void test_WolfSSLSession_readSlicedByteBuffer() throws Exception {
+        final ServerSocket srvSocket = new ServerSocket(0);
+        final WolfSSLContext srvCtx = createAndSetupWolfSSLContext(
+            srvCert, srvKey, WolfSSL.SSL_FILETYPE_PEM, cliCert,
+            WolfSSL.SSLv23_ServerMethod());
+        WolfSSLContext cliCtx = createAndSetupWolfSSLContext(
+            cliCert, cliKey, WolfSSL.SSL_FILETYPE_PEM, caCert,
+            WolfSSL.SSLv23_ClientMethod());
+        final byte[] payload = "sliced-buf-payload".getBytes();
+
+        ExecutorService es = Executors.newSingleThreadExecutor();
+        Future<Void> srv = es.submit(() -> {
+            try (Socket s = srvSocket.accept()) {
+                WolfSSLSession ss = new WolfSSLSession(srvCtx);
+                ss.setFd(s);
+                int r;
+                int e;
+                do {
+                    r = ss.accept();
+                    e = ss.getError(r);
+                } while (r != WolfSSL.SSL_SUCCESS &&
+                        (e == WolfSSL.SSL_ERROR_WANT_READ ||
+                         e == WolfSSL.SSL_ERROR_WANT_WRITE));
+                ss.write(payload, payload.length, 0);
+                ss.shutdownSSL();
+                ss.freeSSL();
+            }
+            return null;
+        });
+
+        Socket cliSock = null;
+        WolfSSLSession cliSes = null;
+        try {
+            cliSock = new Socket(InetAddress.getLoopbackAddress(),
+                srvSocket.getLocalPort());
+            cliSes = new WolfSSLSession(cliCtx);
+            cliSes.setFd(cliSock);
+            int r;
+            int e;
+            do {
+                r = cliSes.connect();
+                e = cliSes.getError(r);
+            } while (r != WolfSSL.SSL_SUCCESS &&
+                    (e == WolfSSL.SSL_ERROR_WANT_READ ||
+                     e == WolfSSL.SSL_ERROR_WANT_WRITE));
+
+            int prefix = 64;
+            ByteBuffer parent = ByteBuffer.allocate(256);
+            byte[] backing = parent.array();
+            byte sentinel = (byte) 0xA5;
+            Arrays.fill(backing, sentinel);
+            parent.position(prefix);
+            ByteBuffer slice = parent.slice();
+            assertEquals(prefix, slice.arrayOffset());
+
+            int total = 0;
+            while (total < payload.length) {
+                int n = cliSes.read(slice, payload.length - total, 5000);
+                if (n > 0) {
+                    total += n;
+                    continue;
+                }
+                int err = cliSes.getError(n);
+                if (err == WolfSSL.SSL_ERROR_WANT_READ ||
+                    err == WolfSSL.SSL_ERROR_WANT_WRITE) {
+                    continue;
+                }
+                fail("cliSes.read() failed: ret=" + n + " err=" + err +
+                    " total=" + total + "/" + payload.length);
+            }
+
+            for (int i = 0; i < prefix; i++) {
+                assertEquals("backing[" + i + "] corrupted",
+                    sentinel, backing[i]);
+            }
+            assertArrayEquals(payload, Arrays.copyOfRange(backing,
+                prefix, prefix + payload.length));
+            assertEquals(payload.length, slice.position());
+
+            cliSes.shutdownSSL();
+        } finally {
+            try {
+                srv.get(10, TimeUnit.SECONDS);
+            } finally {
+                es.shutdownNow();
+                if (cliSes != null) {
+                    cliSes.freeSSL();
+                }
+                if (cliSock != null) {
+                    cliSock.close();
+                }
+                srvSocket.close();
+                cliCtx.free();
+                srvCtx.free();
+            }
+        }
+    }
 }
 

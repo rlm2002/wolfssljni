@@ -42,6 +42,7 @@ extern jmethodID g_bufferPositionMethodId;         /* ByteBuffer.position() */
 extern jmethodID g_bufferLimitMethodId;            /* ByteBuffer.limit() */
 extern jmethodID g_bufferHasArrayMethodId;         /* ByteBuffer.hasArray() */
 extern jmethodID g_bufferArrayMethodId;            /* ByteBuffer.array() */
+extern jmethodID g_bufferArrayOffsetMethodId;     /* ByteBuffer.arrayOffset() */
 extern jmethodID g_bufferSetPositionMethodId;      /* ByteBuffer.position(int) */
 extern jmethodID g_verifyCallbackMethodId;         /* WolfSSLVerifyCallback.verifyCallback */
 

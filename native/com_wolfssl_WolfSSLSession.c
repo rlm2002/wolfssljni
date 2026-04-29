@@ -1303,6 +1303,7 @@ JNIEXPORT jint JNICALL Java_com_wolfssl_WolfSSLSession_write__JLjava_nio_ByteBuf
     int ret = BAD_FUNC_ARG;
     int maxInputSz;
     int inSz = length;
+    int arrayOffset = 0;
     byte* data = NULL;
     WOLFSSL* ssl = (WOLFSSL*)(uintptr_t)sslPtr;
     jbyteArray bufArr = NULL;
@@ -1333,6 +1334,15 @@ JNIEXPORT jint JNICALL Java_com_wolfssl_WolfSSLSession_write__JLjava_nio_ByteBuf
                 return SSL_FAILURE;
             }
 
+            /* Honor arrayOffset() for sliced/duplicated array-backed
+             * ByteBuffers, where logical position 0 maps to backing
+             * array index arrayOffset() */
+            arrayOffset = (int)(*jenv)->CallIntMethod(jenv, buf,
+                g_bufferArrayOffsetMethodId);
+            if ((*jenv)->ExceptionCheck(jenv)) {
+                return SSL_FAILURE;
+            }
+
             /* Get array elements */
             data = (byte *)(*jenv)->GetByteArrayElements(jenv, bufArr, NULL);
             if (data == NULL) {
@@ -1356,8 +1366,8 @@ JNIEXPORT jint JNICALL Java_com_wolfssl_WolfSSLSession_write__JLjava_nio_ByteBuf
             }
         }
 
-        ret = SSLWriteNonblockingWithSelectPoll(ssl, data + position,
-            (int)inSz, (int)timeout);
+        ret = SSLWriteNonblockingWithSelectPoll(ssl,
+            data + arrayOffset + position, (int)inSz, (int)timeout);
 
         /* release memory if using array mode */
         if (hasArray) {
@@ -1530,6 +1540,7 @@ JNIEXPORT jint JNICALL Java_com_wolfssl_WolfSSLSession_read__JLjava_nio_ByteBuff
     int size = 0;
     int maxOutputSz;
     int outSz = length;
+    int arrayOffset = 0;
     byte* data = NULL;
     WOLFSSL* ssl = (WOLFSSL*)(uintptr_t)sslPtr;
     jbyteArray bufArr = NULL;
@@ -1560,6 +1571,15 @@ JNIEXPORT jint JNICALL Java_com_wolfssl_WolfSSLSession_read__JLjava_nio_ByteBuff
                 return SSL_FAILURE;
             }
 
+            /* Honor arrayOffset() for sliced/duplicated array-backed
+             * ByteBuffers, where logical position 0 maps to backing
+             * array index arrayOffset() */
+            arrayOffset = (int)(*jenv)->CallIntMethod(jenv, buf,
+                g_bufferArrayOffsetMethodId);
+            if ((*jenv)->ExceptionCheck(jenv)) {
+                return SSL_FAILURE;
+            }
+
             /* Get array elements */
             data = (byte *)(*jenv)->GetByteArrayElements(jenv, bufArr, NULL);
             if (data == NULL) {
@@ -1583,8 +1603,8 @@ JNIEXPORT jint JNICALL Java_com_wolfssl_WolfSSLSession_read__JLjava_nio_ByteBuff
             }
         }
 
-        size = SSLReadNonblockingWithSelectPoll(ssl, data + position,
-            outSz, (int)timeout);
+        size = SSLReadNonblockingWithSelectPoll(ssl,
+            data + arrayOffset + position, outSz, (int)timeout);
 
         /* Release array elements if using array-backed buffer.
          * Note: DirectByteBuffer doesn't need releasing data */

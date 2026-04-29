@@ -67,6 +67,7 @@ jmethodID g_bufferPositionMethodId = NULL;
 jmethodID g_bufferLimitMethodId = NULL;
 jmethodID g_bufferHasArrayMethodId = NULL;
 jmethodID g_bufferArrayMethodId = NULL;
+jmethodID g_bufferArrayOffsetMethodId = NULL;
 jmethodID g_bufferSetPositionMethodId = NULL;
 jmethodID g_verifyCallbackMethodId = NULL;
 
@@ -185,6 +186,12 @@ JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM* vm, void* reserved)
         return JNI_ERR;
     }
 
+    g_bufferArrayOffsetMethodId = (*env)->GetMethodID(env, byteBufferClass,
+        "arrayOffset", "()I");
+    if (g_bufferArrayOffsetMethodId == NULL) {
+        return JNI_ERR;
+    }
+
     g_bufferSetPositionMethodId = (*env)->GetMethodID(env, byteBufferClass,
         "position", "(I)Ljava/nio/Buffer;");
     if (g_bufferSetPositionMethodId == NULL) {
@@ -236,6 +243,7 @@ JNIEXPORT void JNICALL JNI_OnUnload(JavaVM* vm, void* reserved)
     g_bufferLimitMethodId = NULL;
     g_bufferHasArrayMethodId = NULL;
     g_bufferArrayMethodId = NULL;
+    g_bufferArrayOffsetMethodId = NULL;
     g_bufferSetPositionMethodId = NULL;
     g_verifyCallbackMethodId = NULL;
 }
