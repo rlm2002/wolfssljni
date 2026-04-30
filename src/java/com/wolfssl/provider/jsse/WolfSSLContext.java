@@ -364,10 +364,12 @@ public class WolfSSLContext extends SSLContextSpi {
                 /* skip loading if encoding error is encountered */
                 WolfSSLDebug.log(getClass(), WolfSSLDebug.INFO,
                     () -> "skipped loading CA, encoding error");
+                continue;
             } catch (WolfSSLJNIException we) {
                 /* skip loading if wolfSSL fails to load der encoding */
                 WolfSSLDebug.log(getClass(), WolfSSLDebug.INFO,
                     () -> "skipped loading CA, JNI exception");
+                continue;
             }
 
             final String sigAltName = caList[i].getSigAlgName();
