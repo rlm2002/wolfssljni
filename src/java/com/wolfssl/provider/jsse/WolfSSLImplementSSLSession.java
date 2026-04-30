@@ -654,11 +654,12 @@ public class WolfSSLImplementSSLSession extends ExtendedSSLSession {
 
         } catch (IllegalStateException | WolfSSLJNIException |
                 WolfSSLException ex) {
-            WolfSSLDebug.log(getClass(), WolfSSLDebug.INFO,
+            WolfSSLDebug.log(getClass(), WolfSSLDebug.ERROR,
                 () -> "Error getting peer certificate chain: "
                 + ex.getMessage());
+            throw new SSLPeerUnverifiedException(
+                "Error getting peer certificate chain: " + ex.getMessage());
         }
-        return null;
     }
 
     @Override
