@@ -2326,7 +2326,9 @@ public class WolfSSLEngine extends SSLEngine {
             this.handshakeStartedExplicitly = true;
 
         } catch (SocketTimeoutException e) {
-            e.printStackTrace();
+            WolfSSLDebug.log(getClass(), WolfSSLDebug.ERROR,
+                () -> "doHandshake() timed out in beginHandshake(): " +
+                e.getMessage());
             throw new SSLException(e);
 
         } finally {
