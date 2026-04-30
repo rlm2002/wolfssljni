@@ -35,7 +35,7 @@ import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
 import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.Objects;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -62,7 +62,7 @@ public class WolfSSLImplementSSLSession extends ExtendedSSLSession {
     private final WolfSSLAuthStore authStore;
     private WolfSSLSessionContext ctx = null;
     private boolean valid = false;
-    private final HashMap<String, Object> binding;
+    private final ConcurrentHashMap<String, Object> binding;
     private final int port;
     private final String host;
     String protocol = null;
@@ -162,7 +162,7 @@ public class WolfSSLImplementSSLSession extends ExtendedSSLSession {
         this.peerCerts = null;
         this.sesPtr = 0;
         this.protocol = this.nullProtocol;
-        binding = new HashMap<String, Object>();
+        binding = new ConcurrentHashMap<String, Object>();
 
         creation = new Date();
         accessed = new Date();
@@ -190,7 +190,7 @@ public class WolfSSLImplementSSLSession extends ExtendedSSLSession {
         this.peerCerts = null;
         this.sesPtr = 0;
         this.protocol = this.nullProtocol;
-        binding = new HashMap<String, Object>();
+        binding = new ConcurrentHashMap<String, Object>();
 
         creation = new Date();
         accessed = new Date();
@@ -218,7 +218,7 @@ public class WolfSSLImplementSSLSession extends ExtendedSSLSession {
         this.peerCerts = null;
         this.sesPtr = 0;
         this.protocol = this.nullProtocol;
-        binding = new HashMap<String, Object>();
+        binding = new ConcurrentHashMap<String, Object>();
 
         creation = new Date();
         accessed = new Date();
@@ -282,11 +282,11 @@ public class WolfSSLImplementSSLSession extends ExtendedSSLSession {
         this.sesPtr = orig.sesPtr;
         this.sesPtrUpdatedAfterTable = false;
 
-        /* Copy binding HashMap so session values are preserved */
+        /* Copy binding map so session values are preserved */
         if (orig.binding != null) {
-            this.binding = new HashMap<String, Object>(orig.binding);
+            this.binding = new ConcurrentHashMap<String, Object>(orig.binding);
         } else {
-            this.binding = new HashMap<String, Object>();
+            this.binding = new ConcurrentHashMap<String, Object>();
         }
 
         WolfSSLDebug.log(getClass(), WolfSSLDebug.INFO,
@@ -430,24 +430,19 @@ public class WolfSSLImplementSSLSession extends ExtendedSSLSession {
      * @throws IllegalArgumentException if input name is null
      */
     public void putValue(String name, Object obj) {
-        Object old;
-
-        if (name == null) {
+        if (name == null || obj == null) {
             throw new IllegalArgumentException();
         }
 
-        /* check if Object should be notified */
+        Object old = binding.put(name, obj);
+
         if (obj instanceof SSLSessionBindingListener) {
             ((SSLSessionBindingListener) obj).valueBound(
                     new SSLSessionBindingEvent(this, name));
         }
-
-        old = binding.put(name, obj);
-        if (old != null) {
-            if (old instanceof SSLSessionBindingListener) {
-                ((SSLSessionBindingListener) old).valueUnbound(
-                        new SSLSessionBindingEvent(this, name));
-            }
+        if (old instanceof SSLSessionBindingListener) {
+            ((SSLSessionBindingListener) old).valueUnbound(
+                    new SSLSessionBindingEvent(this, name));
         }
     }
 
@@ -470,20 +465,16 @@ public class WolfSSLImplementSSLSession extends ExtendedSSLSession {
      * @throws IllegalArgumentException if input name is null
      */
     public void removeValue(String name) {
-        Object obj;
-
         if (name == null) {
             throw new IllegalArgumentException();
         }
 
-        obj = binding.get(name);
-        if (obj != null) {
-            /* check if Object should be notified */
-            if (obj instanceof SSLSessionBindingListener) {
-                ((SSLSessionBindingListener) obj).valueUnbound(
-                        new SSLSessionBindingEvent(this, name));
-            }
-            binding.remove(name);
+        /* Use ConcurrentHashMap.remove() atomic fetch-and-remove so only
+         * the thread that actually removed the entry fires valueUnbound(). */
+        Object old = binding.remove(name);
+        if (old instanceof SSLSessionBindingListener) {
+            ((SSLSessionBindingListener) old).valueUnbound(
+                    new SSLSessionBindingEvent(this, name));
         }
     }
 
