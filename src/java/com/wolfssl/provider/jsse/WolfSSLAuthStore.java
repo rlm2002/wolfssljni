@@ -758,11 +758,13 @@ public class WolfSSLAuthStore {
                     diff = (now - current.creation.getTime()) / 1000;
 
                     if (diff < 0) {
-                    /* session is from the future ... */ /* TODO */
-
+                        /* Session creation time in the future. Invalidate so
+                         * it cannot persist indefinitely past the timeout. */
+                        WolfSSLDebug.log(getClass(), WolfSSLDebug.INFO,
+                            () -> "Invalidating session with future creation");
+                        current.invalidate();
                     }
-
-                    if (in > 0 && diff >= in) {
+                    else if (in > 0 && diff >= in) {
                         current.invalidate();
                     }
                     try {
