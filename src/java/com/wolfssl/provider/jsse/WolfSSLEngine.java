@@ -1102,17 +1102,19 @@ public class WolfSSLEngine extends SSLEngine {
      * @return number of available/remaining bytes in array of ByteBuffers
      * @throws IllegalArgumentException if readonly buffer found
      */
-    private static synchronized int getTotalOutputSize(ByteBuffer[] out,
-                                          int ofst, int length) {
+    private static int getTotalOutputSize(ByteBuffer[] out,
+        int ofst, int length) {
+
         int i = 0;
         int maxOutSz = 0;
 
         for (i = 0; i < length; i++) {
-            if (out[i + ofst] == null || out[i + ofst].isReadOnly()) {
+            ByteBuffer buf = out[i + ofst];
+            if (buf == null || buf.isReadOnly()) {
                 throw new IllegalArgumentException(
                     "null or readonly out buffer found");
             }
-            maxOutSz += out[i + ofst].remaining();
+            maxOutSz += buf.remaining();
         }
 
         return maxOutSz;
