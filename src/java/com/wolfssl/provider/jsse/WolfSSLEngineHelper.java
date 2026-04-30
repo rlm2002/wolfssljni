@@ -516,7 +516,7 @@ public class WolfSSLEngineHelper {
      *
      * @return String array of all supported cipher suites
      */
-    protected static synchronized String[] getAllCiphers() {
+    protected static String[] getAllCiphers() {
         return WolfSSLUtil.sanitizeSuites(WolfSSL.getCiphersIana(), false);
     }
 
@@ -638,7 +638,7 @@ public class WolfSSLEngineHelper {
      *
      * @return String array of supported protocols
      */
-    protected static synchronized String[] getAllProtocols() {
+    protected static String[] getAllProtocols() {
         return WolfSSLUtil.sanitizeProtocols(
             WolfSSL.getProtocols(), WolfSSL.TLS_VERSION.INVALID);
     }
