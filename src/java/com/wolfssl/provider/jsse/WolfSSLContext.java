@@ -26,7 +26,6 @@ import java.security.SecureRandom;
 import java.security.cert.CertificateEncodingException;
 import java.security.cert.X509Certificate;
 import javax.security.auth.x500.X500Principal;
-import java.util.Arrays;
 
 import javax.net.ssl.KeyManager;
 import javax.net.ssl.SSLContextSpi;
@@ -310,7 +309,7 @@ public class WolfSSLContext extends SSLContextSpi {
         }
 
         WolfSSLDebug.log(getClass(), WolfSSLDebug.INFO,
-            () -> "Using X509TrustManager: " + tm.toString());
+            () -> "Using X509TrustManager: " + tm.getClass().getName());
 
         /* We only need to load trusted CA certificates into our native
          * WOLFSSL_CTX if we are doing internal verification with wolfSSL
@@ -387,6 +386,24 @@ public class WolfSSLContext extends SSLContextSpi {
         }
     }
 
+    /* Format an array of objects as "[Class1, Class2, ...]" for debug
+     * logging without invoking caller-supplied toString() on user-provided
+     * KeyManager/TrustManager objects. */
+    private static String classNames(Object[] arr) {
+        if (arr == null) {
+            return "null";
+        }
+        StringBuilder sb = new StringBuilder("[");
+        for (int i = 0; i < arr.length; i++) {
+            if (i > 0) {
+                sb.append(", ");
+            }
+            sb.append(arr[i] == null ? "null" : arr[i].getClass().getName());
+        }
+        sb.append("]");
+        return sb.toString();
+    }
+
     /**
      * Initializes a SSLContext.
      *
@@ -408,8 +425,9 @@ public class WolfSSLContext extends SSLContextSpi {
         SecureRandom sr) throws KeyManagementException {
 
         WolfSSLDebug.log(getClass(), WolfSSLDebug.INFO,
-            () -> "entered engineInit(km=" + Arrays.toString(km) + ", tm=" +
-            Arrays.toString(tm) + ", sr=" + sr +")");
+            () -> "entered engineInit(km=" + classNames(km) + ", tm=" +
+            classNames(tm) + ", sr=" +
+            (sr == null ? "null" : sr.getClass().getName()) + ")");
 
         try {
             authStore = new WolfSSLAuthStore(km, tm, sr, currentVersion,

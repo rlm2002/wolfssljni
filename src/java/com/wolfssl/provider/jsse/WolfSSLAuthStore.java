@@ -145,7 +145,8 @@ public class WolfSSLAuthStore {
                 if (managers[i] instanceof X509KeyManager) {
                     km = (X509KeyManager)managers[i];
                     WolfSSLDebug.log(getClass(), WolfSSLDebug.INFO,
-                        () -> "located X509KeyManager instance: " + km);
+                        () -> "located X509KeyManager instance: " +
+                        km.getClass().getName());
                     break;
                 }
             }
@@ -185,7 +186,8 @@ public class WolfSSLAuthStore {
                 if (managers[i] instanceof X509TrustManager) {
                     tm = (X509TrustManager)managers[i];
                     WolfSSLDebug.log(getClass(), WolfSSLDebug.INFO,
-                        () -> "located X509TrustManager instance: " + tm);
+                        () -> "located X509TrustManager instance: " +
+                        tm.getClass().getName());
                     break;
                 }
             }
