@@ -321,8 +321,8 @@ public class WolfSSLImplementSSLSession extends ExtendedSSLSession {
             return null;
 
         } catch (WolfSSLJNIException e) {
-            /* print stack trace of native JNI error for debugging */
-            e.printStackTrace();
+            WolfSSLDebug.log(getClass(), WolfSSLDebug.ERROR,
+                () -> "In getId(), JNI error: " + e.getMessage());
             return null;
         }
     }
