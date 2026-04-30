@@ -1158,7 +1158,7 @@ public class WolfSSLImplementSSLSession extends ExtendedSSLSession {
                 sniNames.add(sniName);
                 this.sniServerNames = new ArrayList<SNIServerName>(sniNames);
 
-                return sniNames;
+                return Collections.unmodifiableList(sniNames);
             }
         } catch (IllegalArgumentException e) {
             throw new UnsupportedOperationException(e);
