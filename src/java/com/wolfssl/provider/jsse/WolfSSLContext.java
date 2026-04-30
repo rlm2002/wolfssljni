@@ -622,7 +622,7 @@ public class WolfSSLContext extends SSLContextSpi {
      * @return String array of enabled SSL/TLS protocols for this
      *         WolfSSLContext object
      */
-    public String[] getProtocolsMask(long noOpt) {
+    private String[] getProtocolsMask(long noOpt) {
         if (ctx != null) {
             ctx.setOptions(noOpt);
         }
