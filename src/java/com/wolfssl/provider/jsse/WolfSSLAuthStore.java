@@ -203,8 +203,9 @@ public class WolfSSLAuthStore {
 
         if (random == null) {
             sr = new SecureRandom();
+        } else {
+            sr = random;
         }
-        sr = random;
     }
 
     /**
