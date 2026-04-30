@@ -619,6 +619,7 @@ public class WolfSSLAuthStore {
 
         String toHash;
         final int hashCode;
+        final boolean haveKey;
 
         /* Don't store session if invalid (or not complete with sesPtr
          * if on client side, or not resumable). Server-side still needs to
@@ -642,6 +643,7 @@ public class WolfSSLAuthStore {
             toHash = session.getPeerHost().concat(Integer.toString(
                      session.getPeerPort()));
             hashCode = toHash.hashCode();
+            haveKey = true;
         }
         else {
             /* If no peer host is available then create hash key from
@@ -650,15 +652,18 @@ public class WolfSSLAuthStore {
             if (sessionId != null && sessionId.length > 0 &&
                 (idAllZeros(sessionId) == false)) {
                 hashCode = Arrays.toString(session.getId()).hashCode();
+                haveKey = true;
             } else {
                 hashCode = 0;
+                haveKey = false;
             }
         }
 
-        /* Always try to store session into cache table, as long as we
-         * have a hashCode. If session already exists for hashCode, it
-         * will be overwritten with new/refreshed version */
-        if (hashCode != 0) {
+        /* Only store session into cache if we have a usable key. If session
+         * already exists for hashCode, it will be overwritten with the new
+         * version. Note that hashCode == 0 is a legitimate hash value, so
+         * we use haveKey rather than hashCode == 0 to gate caching. */
+        if (haveKey) {
             WolfSSLDebug.log(getClass(), WolfSSLDebug.INFO,
                 () -> "stored session in cache table (host: " +
                 session.getPeerHost() + ", port: " +
@@ -672,7 +677,11 @@ public class WolfSSLAuthStore {
             }
 
             printSessionStoreStatus();
+            return WolfSSL.SSL_SUCCESS;
         }
+
+        WolfSSLDebug.log(getClass(), WolfSSLDebug.INFO,
+            () -> "Session not cached: no peer host and no usable session ID");
 
         return WolfSSL.SSL_SUCCESS;
     }
