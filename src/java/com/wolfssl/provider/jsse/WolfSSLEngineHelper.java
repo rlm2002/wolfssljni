@@ -516,7 +516,7 @@ public class WolfSSLEngineHelper {
      *
      * @return String array of all supported cipher suites
      */
-    protected static synchronized String[] getAllCiphers() {
+    protected static String[] getAllCiphers() {
         return WolfSSLUtil.sanitizeSuites(WolfSSL.getCiphersIana(), false);
     }
 
@@ -638,7 +638,7 @@ public class WolfSSLEngineHelper {
      *
      * @return String array of supported protocols
      */
-    protected static synchronized String[] getAllProtocols() {
+    protected static String[] getAllProtocols() {
         return WolfSSLUtil.sanitizeProtocols(
             WolfSSL.getProtocols(), WolfSSL.TLS_VERSION.INVALID);
     }
@@ -1696,7 +1696,7 @@ public class WolfSSLEngineHelper {
                 /* send CloseNotify */
                 /* TODO: SunJSSE sends a Handshake Failure alert instead here */
                 this.ssl.shutdownSSL();
-            } catch (SocketException e) {
+            } catch (SocketException | SocketTimeoutException e) {
                 throw new SSLException(e);
             }
 
@@ -1711,6 +1711,13 @@ public class WolfSSLEngineHelper {
                 /* new handshakes can not be made in this case. */
                 WolfSSLDebug.log(getClass(), WolfSSLDebug.INFO,
                     () -> "session creation not allowed");
+
+                try {
+                    /* send CloseNotify so peer is not left hanging */
+                    this.ssl.shutdownSSL();
+                } catch (SocketException | SocketTimeoutException e) {
+                    throw new SSLException(e);
+                }
 
                 return WolfSSL.SSL_HANDSHAKE_FAILURE;
             }

@@ -134,6 +134,14 @@ public class WolfSSLEngine extends SSLEngine {
      * inside SendAppData, of size SSLSession.getApplicationBufferSize() */
     private ByteBuffer staticAppDataBuf = null;
 
+    /* Largest plaintext byte count written into staticAppDataBuf by the most
+     * recent SendAppData() call. Used to bound the post-write zeroing range
+     * so residual plaintext from a prior larger write is wiped even when the
+     * current write is smaller. Bytes past max(sendSz, lastSendSz) never need
+     * zeroing here: ByteBuffer.allocateDirect() zero-initializes the buffer,
+     * and SendAppData() is the only writer of plaintext into it. */
+    private int lastSendSz = 0;
+
     /* Stashed decrypted data when output buffer too small.
      * Served on next unwrap() without calling ssl_read(). */
     private byte[] pendingAppData = null;
@@ -780,14 +788,31 @@ public class WolfSSLEngine extends SSLEngine {
         WolfSSLDebug.log(getClass(), WolfSSLDebug.INFO,
             () -> "calling ssl.write() with size: " + tmpSendSz);
 
-        synchronized (ioLock) {
-            ret = this.ssl.write(dataArr, sendSz);
-        }
-        if (ret <= 0) {
-            /* error, reset in[] positions for next call */
-            for (i = ofst; i < ofst + len; i++) {
-                in[i].position(pos[i - ofst]);
+        try {
+            synchronized (ioLock) {
+                ret = this.ssl.write(dataArr, sendSz);
             }
+            if (ret <= 0) {
+                /* error, reset in[] positions for next call */
+                for (i = ofst; i < ofst + len; i++) {
+                    in[i].position(pos[i - ofst]);
+                }
+            }
+        } finally {
+            /* Zero plaintext from heap and direct buffers even on exception.
+             * Zero up to max(sendSz, lastSendSz) bytes so bytes from a prior
+             * larger write are wiped if needed. */
+            Arrays.fill(dataArr, (byte)0);
+            int zeroSz = Math.max(sendSz, this.lastSendSz);
+            /* clear() resets position/limit only, does not zero bytes */
+            this.staticAppDataBuf.clear();
+            /* Bulk put faster than a per-byte loop on DirectByteBuffer */
+            this.staticAppDataBuf.put(dataArr, 0, sendSz);
+            /* Loop wipes [sendSz, lastSendSz) when previous write was larger */
+            for (int j = sendSz; j < zeroSz; j++) {
+                this.staticAppDataBuf.put((byte)0);
+            }
+            this.lastSendSz = sendSz;
         }
 
         final int tmpRet = ret;
@@ -1077,17 +1102,19 @@ public class WolfSSLEngine extends SSLEngine {
      * @return number of available/remaining bytes in array of ByteBuffers
      * @throws IllegalArgumentException if readonly buffer found
      */
-    private static synchronized int getTotalOutputSize(ByteBuffer[] out,
-                                          int ofst, int length) {
+    private static int getTotalOutputSize(ByteBuffer[] out,
+        int ofst, int length) {
+
         int i = 0;
         int maxOutSz = 0;
 
         for (i = 0; i < length; i++) {
-            if (out[i + ofst] == null || out[i + ofst].isReadOnly()) {
+            ByteBuffer buf = out[i + ofst];
+            if (buf == null || buf.isReadOnly()) {
                 throw new IllegalArgumentException(
                     "null or readonly out buffer found");
             }
-            maxOutSz += out[i + ofst].remaining();
+            maxOutSz += buf.remaining();
         }
 
         return maxOutSz;
@@ -2301,7 +2328,9 @@ public class WolfSSLEngine extends SSLEngine {
             this.handshakeStartedExplicitly = true;
 
         } catch (SocketTimeoutException e) {
-            e.printStackTrace();
+            WolfSSLDebug.log(getClass(), WolfSSLDebug.ERROR,
+                () -> "doHandshake() timed out in beginHandshake(): " +
+                e.getMessage());
             throw new SSLException(e);
 
         } finally {
@@ -2813,11 +2842,16 @@ public class WolfSSLEngine extends SSLEngine {
             this.ssl.freeSSL();
             this.ssl = null;
         }
-        /* Clear our reference to static application direct ByteBuffer */
+        /* Zero only the byte range that held plaintext and drop our reference
+         * to the buffer. */
         if (this.staticAppDataBuf != null) {
             this.staticAppDataBuf.clear();
+            for (int j = 0; j < this.lastSendSz; j++) {
+                this.staticAppDataBuf.put((byte)0);
+            }
             this.staticAppDataBuf = null;
         }
+        this.lastSendSz = 0;
         super.finalize();
     }
 }
