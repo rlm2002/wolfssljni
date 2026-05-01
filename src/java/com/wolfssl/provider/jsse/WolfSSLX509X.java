@@ -40,7 +40,7 @@ import com.wolfssl.WolfSSLException;
  *
  * @author wolfSSL
  */
-@SuppressWarnings("deprecation")
+@SuppressWarnings({"deprecation", "removal"})
 public class WolfSSLX509X extends X509Certificate {
     WolfSSLX509 cert;
 

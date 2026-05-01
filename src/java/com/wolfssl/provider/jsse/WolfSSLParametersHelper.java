@@ -22,7 +22,6 @@ package com.wolfssl.provider.jsse;
 
 import java.lang.reflect.Method;
 import java.lang.reflect.InvocationTargetException;
-import java.security.AccessController;
 import java.security.PrivilegedAction;
 import javax.net.ssl.SSLParameters;
 import com.wolfssl.provider.jsse.WolfSSLJDK8Helper;
@@ -53,7 +52,16 @@ public class WolfSSLParametersHelper
      * has SSLParameters methods that older versions may not have */
     static
     {
-        AccessController.doPrivileged(new PrivilegedAction<Object>() {
+        detectSSLParametersMethods();
+    }
+
+    /* AccessController used via FQN to avoid import-line removal
+     * warning on JDK 17+. */
+    @SuppressWarnings("removal")
+    private static void detectSSLParametersMethods()
+    {
+        java.security.AccessController
+            .doPrivileged(new PrivilegedAction<Object>() {
             public Object run() {
                 Class<?> c = SSLParameters.class;
                 Method[] methods = c.getDeclaredMethods();

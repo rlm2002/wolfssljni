@@ -239,7 +239,7 @@ public class WolfSSLNameConstraints {
     }
 
     @Override
-    @SuppressWarnings("deprecation")
+    @SuppressWarnings({"deprecation", "removal"})
     protected void finalize() throws Throwable {
         try {
             free();

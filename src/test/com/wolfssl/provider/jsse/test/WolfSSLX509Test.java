@@ -73,6 +73,7 @@ import com.wolfssl.provider.jsse.WolfSSLX509;
 import com.wolfssl.provider.jsse.WolfSSLX509X;
 import com.wolfssl.test.TimedTestWatcher;
 
+@SuppressWarnings("removal")
 public class WolfSSLX509Test {
 
     @Rule

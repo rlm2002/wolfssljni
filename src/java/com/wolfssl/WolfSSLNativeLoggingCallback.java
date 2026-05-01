@@ -33,6 +33,7 @@ import java.time.Instant;
  */
 class WolfSSLNativeLoggingCallback implements WolfSSLLoggingCallback
 {
+    @SuppressWarnings("deprecation")
     public synchronized void loggingCallback(int logLevel, String logMessage) {
 
         System.err.println(

@@ -626,7 +626,7 @@ public class WolfSSLX509Name {
         }
     }
 
-    @SuppressWarnings("deprecation")
+    @SuppressWarnings({"deprecation", "removal"})
     @Override
     protected void finalize() throws Throwable
     {

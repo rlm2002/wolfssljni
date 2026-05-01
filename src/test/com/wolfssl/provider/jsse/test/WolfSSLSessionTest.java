@@ -92,6 +92,7 @@ public class WolfSSLSessionTest {
 
 
     @Test
+    @SuppressWarnings("removal")
     public void testSessionTimeAndCerts()
         throws NoSuchAlgorithmException, KeyManagementException,
                KeyStoreException, CertificateException, IOException,
@@ -148,6 +149,7 @@ public class WolfSSLSessionTest {
     }
 
     @Test
+    @SuppressWarnings("removal")
     public void testNullSession()
         throws NoSuchAlgorithmException, KeyManagementException,
                KeyStoreException, CertificateException, IOException,

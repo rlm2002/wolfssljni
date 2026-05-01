@@ -2806,7 +2806,7 @@ public class WolfSSLEngine extends SSLEngine {
         }
     }
 
-    @SuppressWarnings("deprecation")
+    @SuppressWarnings({"deprecation", "removal"})
     @Override
     protected synchronized void finalize() throws Throwable {
         if (this.ssl != null) {

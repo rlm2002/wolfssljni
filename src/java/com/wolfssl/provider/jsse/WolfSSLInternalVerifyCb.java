@@ -446,6 +446,7 @@ public class WolfSSLInternalVerifyCb implements WolfSSLVerifyCallback {
      *         SSL/TLS handshake should continue. Otherwise return 0
      *         to mark verification failure and stop/abort handshake.
      */
+    @SuppressWarnings("deprecation")
     public int verifyCallback(int preverify_ok, long x509StorePtr) {
 
         WolfSSLCertificate[] certs = null;

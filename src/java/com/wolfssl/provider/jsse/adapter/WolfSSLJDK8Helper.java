@@ -24,7 +24,6 @@ import java.util.List;
 import java.util.ArrayList;
 import java.lang.reflect.Method;
 import java.lang.reflect.InvocationTargetException;
-import java.security.AccessController;
 import java.security.PrivilegedAction;
 import javax.net.ssl.SSLParameters;
 import javax.net.ssl.SNIServerName;
@@ -52,6 +51,7 @@ public class WolfSSLJDK8Helper
      * @param m Java method to call to set SNI server names
      * @param in WolfSSLParameters to set SNI names from
      */
+    @SuppressWarnings("removal")
     protected static void setServerNames(final SSLParameters out,
                                          final Method m, WolfSSLParameters in) {
 
@@ -69,8 +69,11 @@ public class WolfSSLJDK8Helper
                 sni.add(new SNIHostName(name.getEncoded()));
             }
 
-            /* call SSLParameters.setServerName() */
-            AccessController.doPrivileged(new PrivilegedAction<Object>() {
+            /* call SSLParameters.setServerNames().
+             * AccessController used via FQN to avoid import-line removal
+             * warning on JDK 17+. */
+            java.security.AccessController
+                .doPrivileged(new PrivilegedAction<Object>() {
                 public Object run() {
                     try {
                         m.invoke(out, sni);
@@ -122,6 +125,7 @@ public class WolfSSLJDK8Helper
      * @param m method to invoke to set protocols
      * @param in input WolfSSLParameters to read ALPN protocols from
      */
+    @SuppressWarnings("removal")
     protected static void setApplicationProtocols(final SSLParameters out,
                                          final Method m, WolfSSLParameters in) {
 
@@ -134,7 +138,8 @@ public class WolfSSLJDK8Helper
         final Object[] appProtoArr = {appProtos};
         if (appProtos != null) {
             /* call SSLParameters.setApplicationProtocols() */
-            AccessController.doPrivileged(new PrivilegedAction<Object>() {
+            java.security.AccessController
+                .doPrivileged(new PrivilegedAction<Object>() {
                 public Object run() {
                     try {
                         m.invoke(out, appProtoArr);
@@ -190,6 +195,7 @@ public class WolfSSLJDK8Helper
      * @param m method to invoke to set endpoint ID algo
      * @param in input WolfSSLParameters to read endpoint ID algo from
      */
+    @SuppressWarnings("removal")
     protected static void setEndpointIdentificationAlgorithm(
         final SSLParameters out, final Method m, WolfSSLParameters in) {
 
@@ -202,7 +208,8 @@ public class WolfSSLJDK8Helper
         final String idAlgo = in.getEndpointIdentificationAlgorithm();
         if (idAlgo != null) {
             /* call SSLParameters.setEndpointIdentificationAlgorithm() */
-            AccessController.doPrivileged(new PrivilegedAction<Object>() {
+            java.security.AccessController
+                .doPrivileged(new PrivilegedAction<Object>() {
                 public Object run() {
                     try {
                         m.invoke(out, idAlgo);

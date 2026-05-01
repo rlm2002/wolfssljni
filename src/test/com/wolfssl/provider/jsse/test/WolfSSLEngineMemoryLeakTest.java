@@ -82,6 +82,7 @@ public class WolfSSLEngineMemoryLeakTest {
      * The test will fail if JNI global references prevent garbage collection.
      */
     @Test
+    @SuppressWarnings("removal")
     public void testEngineMemoryLeakWithAbandonedEngines() throws Exception {
 
         /* Skip on Android due to performance and timeout issues */

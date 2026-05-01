@@ -110,7 +110,7 @@ public class WolfCryptEccKey {
         return EccPrivateKeyToPKCS8(getEccKeyPtr());
     }
 
-    @SuppressWarnings("deprecation")
+    @SuppressWarnings({"deprecation", "removal"})
     @Override
     protected void finalize() throws Throwable
     {

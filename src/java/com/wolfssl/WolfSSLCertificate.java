@@ -2624,7 +2624,7 @@ public class WolfSSLCertificate implements Serializable {
         }
     }
 
-    @SuppressWarnings("deprecation")
+    @SuppressWarnings({"deprecation", "removal"})
     @Override
     protected void finalize() throws Throwable
     {

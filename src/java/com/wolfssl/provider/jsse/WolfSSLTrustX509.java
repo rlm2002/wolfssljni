@@ -1339,7 +1339,7 @@ public final class WolfSSLTrustX509 extends X509ExtendedTrustManager {
         }
     }
 
-    @SuppressWarnings("deprecation")
+    @SuppressWarnings({"deprecation", "removal"})
     @Override
     protected void finalize() throws Throwable {
         this.store = null;
