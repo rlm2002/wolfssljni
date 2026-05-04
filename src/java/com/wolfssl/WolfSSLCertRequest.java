@@ -23,6 +23,7 @@ package com.wolfssl;
 import java.io.File;
 import java.io.IOException;
 import java.nio.charset.Charset;
+import java.util.Arrays;
 import java.security.PublicKey;
 import java.security.PrivateKey;
 import java.security.interfaces.RSAPublicKey;
@@ -634,7 +635,11 @@ public class WolfSSLCertRequest {
                 "Failed to read bytes from file: " + filePath);
         }
 
-        signRequest(fileBytes, keyType, format, digestAlg);
+        try {
+            signRequest(fileBytes, keyType, format, digestAlg);
+        } finally {
+            Arrays.fill(fileBytes, (byte)0);
+        }
     }
 
     /**
@@ -751,9 +756,13 @@ public class WolfSSLCertRequest {
             throw new WolfSSLException("PrivateKey does not support encoding");
         }
 
-        synchronized (x509ReqLock) {
-            ret = X509_REQ_sign(this.x509ReqPtr, evpKeyType, encodedKey,
-                WolfSSL.SSL_FILETYPE_ASN1, digestAlg);
+        try {
+            synchronized (x509ReqLock) {
+                ret = X509_REQ_sign(this.x509ReqPtr, evpKeyType, encodedKey,
+                    WolfSSL.SSL_FILETYPE_ASN1, digestAlg);
+            }
+        } finally {
+            Arrays.fill(encodedKey, (byte)0);
         }
 
         if (ret != WolfSSL.SSL_SUCCESS) {

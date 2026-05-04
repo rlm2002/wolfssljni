@@ -1117,7 +1117,7 @@ int NativeIORecvCb(WOLFSSL *ssl, char *buf, int sz, void *ctx)
                 "NativeIORecvCb");
         if (needsDetach)
             (*g_vm)->DetachCurrentThread(g_vm);
-        return 0;
+        return WOLFSSL_CBIO_ERR_GENERAL;
     }
 
     /* lookup WolfSSLSession class from object */
@@ -1329,7 +1329,7 @@ int NativeIOSendCb(WOLFSSL *ssl, char *buf, int sz, void *ctx)
                 "NativeIOSendCb");
         if (needsDetach)
             (*g_vm)->DetachCurrentThread(g_vm);
-        return 0;
+        return WOLFSSL_CBIO_ERR_GENERAL;
     }
 
     /* lookup WolfSSLSession class from object */

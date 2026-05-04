@@ -3420,5 +3420,126 @@ public class WolfSSLEngineTest {
         s.unwrap(ByteBuffer.allocateDirect(
             s.getSession().getPacketBufferSize()), out, 1, 1);
     }
+
+    /* Verify unwrap() with ofst > 0 placed all `data` bytes into
+     * out[2] and out[3], and that bytesProduced matches. Regression
+     * for the `idx + ofst >= length` copy-loop bound in unwrap. */
+    private void assertOffsetUnwrapOk(SSLEngineResult result,
+        ByteBuffer[] outArr, byte[] data) {
+
+        assertEquals(data.length, result.bytesProduced());
+        assertEquals(0, outArr[0].position());
+        assertEquals(0, outArr[1].position());
+
+        outArr[2].flip();
+        outArr[3].flip();
+        int n2 = outArr[2].remaining();
+        int n3 = outArr[3].remaining();
+        assertEquals(data.length, n2 + n3);
+
+        byte[] got = new byte[n2 + n3];
+        outArr[2].get(got, 0, n2);
+        outArr[3].get(got, n2, n3);
+        assertTrue(java.util.Arrays.equals(got, data));
+    }
+
+    /* Wrap `data` from client and return server's network buffer
+     * positioned for unwrap(). */
+    private ByteBuffer wrapForServer(SSLEngine client, byte[] data)
+        throws SSLException {
+
+        ByteBuffer netBuf = ByteBuffer.allocateDirect(
+            client.getSession().getPacketBufferSize());
+        SSLEngineResult r = client.wrap(ByteBuffer.wrap(data), netBuf);
+        assertEquals(SSLEngineResult.Status.OK, r.getStatus());
+        netBuf.flip();
+        return netBuf;
+    }
+
+    @Test
+    public void testUnwrapOffsetMultipleBuffers() throws Exception {
+
+        this.ctx = tf.createSSLContext("TLS", engineProvider);
+        SSLEngine server = this.ctx.createSSLEngine();
+        SSLEngine client = this.ctx.createSSLEngine("wolfSSL test", 11111);
+        server.setUseClientMode(false);
+        client.setUseClientMode(true);
+        assertEquals(0, tf.testConnection(server, client, null, null, "x"));
+
+        byte[] data = new byte[1024];
+        new Random().nextBytes(data);
+        ByteBuffer netBuf = wrapForServer(client, data);
+
+        ByteBuffer[] outArr = new ByteBuffer[] {
+            ByteBuffer.allocate(600), ByteBuffer.allocate(600),
+            ByteBuffer.allocate(600), ByteBuffer.allocate(600)
+        };
+        SSLEngineResult r = server.unwrap(netBuf, outArr, 2, 2);
+        assertEquals(SSLEngineResult.Status.OK, r.getStatus());
+        assertOffsetUnwrapOk(r, outArr, data);
+    }
+
+    @Test
+    public void testUnwrapPendingAppDataWithOffset() throws Exception {
+
+        this.ctx = tf.createSSLContext("TLS", engineProvider);
+        SSLEngine server = this.ctx.createSSLEngine();
+        SSLEngine client = this.ctx.createSSLEngine("wolfSSL test", 11111);
+        server.setUseClientMode(false);
+        client.setUseClientMode(true);
+        assertEquals(0, tf.testConnection(server, client, null, null, "x"));
+
+        byte[] data = new byte[1024];
+        new Random().nextBytes(data);
+        ByteBuffer netBuf = wrapForServer(client, data);
+
+        /* First unwrap into too-small output stashes pendingAppData */
+        SSLEngineResult r = server.unwrap(netBuf, ByteBuffer.allocate(64));
+        assertEquals(SSLEngineResult.Status.BUFFER_OVERFLOW, r.getStatus());
+
+        ByteBuffer[] outArr = new ByteBuffer[] {
+            ByteBuffer.allocate(600), ByteBuffer.allocate(600),
+            ByteBuffer.allocate(600), ByteBuffer.allocate(600)
+        };
+        r = server.unwrap(netBuf, outArr, 2, 2);
+        assertOffsetUnwrapOk(r, outArr, data);
+    }
+
+    @Test
+    public void testUnwrapPendingAppDataReStashWithOffset()
+        throws Exception {
+
+        this.ctx = tf.createSSLContext("TLS", engineProvider);
+        SSLEngine server = this.ctx.createSSLEngine();
+        SSLEngine client = this.ctx.createSSLEngine("wolfSSL test", 11111);
+        server.setUseClientMode(false);
+        client.setUseClientMode(true);
+        assertEquals(0, tf.testConnection(server, client, null, null, "x"));
+
+        byte[] data = new byte[1024];
+        new Random().nextBytes(data);
+        ByteBuffer netBuf = wrapForServer(client, data);
+
+        /* First unwrap stashes pendingAppData */
+        SSLEngineResult r = server.unwrap(netBuf, ByteBuffer.allocate(64));
+        assertEquals(SSLEngineResult.Status.BUFFER_OVERFLOW, r.getStatus());
+
+        /* Second unwrap: ofst > 0 but total still too small;
+         * pendingAppData must survive intact for a later call */
+        ByteBuffer[] tooSmall = new ByteBuffer[] {
+            ByteBuffer.allocate(200), ByteBuffer.allocate(200),
+            ByteBuffer.allocate(200), ByteBuffer.allocate(200)
+        };
+        r = server.unwrap(netBuf, tooSmall, 2, 2);
+        assertEquals(SSLEngineResult.Status.BUFFER_OVERFLOW, r.getStatus());
+
+        /* Third unwrap: ofst > 0 with room drains the stash */
+        ByteBuffer[] outArr = new ByteBuffer[] {
+            ByteBuffer.allocate(600), ByteBuffer.allocate(600),
+            ByteBuffer.allocate(600), ByteBuffer.allocate(600)
+        };
+        r = server.unwrap(netBuf, outArr, 2, 2);
+        assertOffsetUnwrapOk(r, outArr, data);
+    }
 }
 

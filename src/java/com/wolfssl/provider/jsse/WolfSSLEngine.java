@@ -1276,7 +1276,7 @@ public class WolfSSLEngine extends SSLEngine {
 
                 /* Copy from intermediate buffer to output bufs */
                 for (i = 0; i < ret;) {
-                    if (idx + ofst >= length) {
+                    if (idx >= length) {
                         /* no more output buffers left */
                         break;
                     }
@@ -1585,9 +1585,9 @@ public class WolfSSLEngine extends SSLEngine {
                             if (outputSpace >= this.pendingAppDataLen) {
                                 /* Serve stashed data to output buffers */
                                 int idx2 = 0;
-                                for (int pos = 0;
-                                        pos < this.pendingAppDataLen;) {
-                                    if (idx2 + ofst >= length) break;
+                                int pos = 0;
+                                for (; pos < this.pendingAppDataLen;) {
+                                    if (idx2 >= length) break;
                                     int space = out[idx2 + ofst].remaining();
                                     if (space == 0) { idx2++; continue; }
                                     int sz2 = Math.min(space,
@@ -1597,7 +1597,7 @@ public class WolfSSLEngine extends SSLEngine {
                                     pos += sz2;
                                     if (pos < this.pendingAppDataLen) idx2++;
                                 }
-                                produced += this.pendingAppDataLen;
+                                produced += pos;
                                 /* Advance past previously consumed bytes */
                                 synchronized (netDataLock) {
                                     in.position(in.position() +
