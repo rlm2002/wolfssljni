@@ -888,6 +888,7 @@ JNIEXPORT jint JNICALL Java_com_wolfssl_WolfSSLCertificate_X509_1sign
     const WOLFSSL_EVP_MD* md = NULL;
     unsigned char* rsaPrivBuf = NULL;
     const char* mdName = NULL;
+    jboolean isCopy = JNI_FALSE;
 
     int ret = WOLFSSL_SUCCESS;
     (void)jcl;
@@ -897,7 +898,7 @@ JNIEXPORT jint JNICALL Java_com_wolfssl_WolfSSLCertificate_X509_1sign
         return WOLFSSL_FAILURE;
     }
 
-    fileBuf = (byte*)(*jenv)->GetByteArrayElements(jenv, fileBytes, NULL);
+    fileBuf = (byte*)(*jenv)->GetByteArrayElements(jenv, fileBytes, &isCopy);
     fileSz = (*jenv)->GetArrayLength(jenv, fileBytes);
 
     if (fileBuf == NULL || fileSz == 0) {
@@ -990,6 +991,15 @@ JNIEXPORT jint JNICALL Java_com_wolfssl_WolfSSLCertificate_X509_1sign
         XFREE(derBuf, NULL, DYNAMIC_TYPE_TMP_BUFFER);
     }
     if (fileBuf != NULL) {
+        /* Only zero if JVM made a copy */
+        if (isCopy == JNI_TRUE) {
+        #if (LIBWOLFSSL_VERSION_HEX >= 0x05008004) && \
+            !defined(WOLFSSL_NO_FORCE_ZERO)
+            wc_ForceZero(fileBuf, fileSz);
+        #else
+            XMEMSET(fileBuf, 0, fileSz);
+        #endif
+        }
         (*jenv)->ReleaseByteArrayElements(jenv, fileBytes,
             (jbyte*)fileBuf, JNI_ABORT);
     }

@@ -1345,7 +1345,11 @@ public class WolfSSLCertificate implements Serializable {
                 "Failed to read bytes from file: " + filePath);
         }
 
-        signCert(fileBytes, keyType, format, digestAlg);
+        try {
+            signCert(fileBytes, keyType, format, digestAlg);
+        } finally {
+            Arrays.fill(fileBytes, (byte)0);
+        }
     }
 
     /**
@@ -1461,9 +1465,13 @@ public class WolfSSLCertificate implements Serializable {
             throw new WolfSSLException("PrivateKey does not support encoding");
         }
 
-        synchronized (x509Lock) {
-            ret = X509_sign(this.x509Ptr, evpKeyType, encodedKey,
-                WolfSSL.SSL_FILETYPE_ASN1, digestAlg);
+        try {
+            synchronized (x509Lock) {
+                ret = X509_sign(this.x509Ptr, evpKeyType, encodedKey,
+                    WolfSSL.SSL_FILETYPE_ASN1, digestAlg);
+            }
+        } finally {
+            Arrays.fill(encodedKey, (byte)0);
         }
 
         if (ret != WolfSSL.SSL_SUCCESS) {
