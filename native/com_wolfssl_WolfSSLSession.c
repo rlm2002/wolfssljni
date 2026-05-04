@@ -6613,7 +6613,7 @@ int NativeSSLIORecvCb(WOLFSSL *ssl, char *buf, int sz, void *ctx)
         if (needsDetach) {
             (*g_vm)->DetachCurrentThread(g_vm);
         }
-        return 0;
+        return WOLFSSL_CBIO_ERR_GENERAL;
     }
 
     /* Detect if we should use ByteBuffer or byte[] I/O callbacks */
@@ -6789,7 +6789,7 @@ int NativeSSLIOSendCb(WOLFSSL *ssl, char *buf, int sz, void *ctx)
         if (needsDetach) {
             (*g_vm)->DetachCurrentThread(g_vm);
         }
-        return 0;
+        return WOLFSSL_CBIO_ERR_GENERAL;
     }
 
     /* Detect if we should use ByteBuffer or byte[] I/O callbacks */
