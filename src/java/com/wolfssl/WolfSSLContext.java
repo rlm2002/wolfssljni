@@ -2546,7 +2546,7 @@ public class WolfSSLContext {
         flushSessions(getContextPtr(), tm);
     }
 
-    @SuppressWarnings("deprecation")
+    @SuppressWarnings({"deprecation", "removal"})
     @Override
     protected void finalize() throws Throwable
     {

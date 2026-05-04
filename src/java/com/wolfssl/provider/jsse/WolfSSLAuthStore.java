@@ -803,7 +803,7 @@ public class WolfSSLAuthStore {
         }
     }
 
-    @SuppressWarnings("deprecation")
+    @SuppressWarnings({"deprecation", "removal"})
     @Override
     protected synchronized void finalize() throws Throwable {
         /* Clear LinkedHashMap and set to null to allow

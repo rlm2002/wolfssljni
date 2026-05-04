@@ -1514,6 +1514,7 @@ public class WolfSSLSocket extends SSLSocket {
      *
      * @throws IOException if a network error occurs
      */
+    @SuppressWarnings("deprecation")
     @Override
     public synchronized void startHandshake() throws IOException {
         int ret;
@@ -2319,7 +2320,7 @@ public class WolfSSLSocket extends SSLSocket {
         }
     }
 
-    @SuppressWarnings("deprecation")
+    @SuppressWarnings({"deprecation", "removal"})
     @Override
     protected synchronized void finalize() throws Throwable {
         if (this.ssl != null) {

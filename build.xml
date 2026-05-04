@@ -297,6 +297,7 @@
                classpathref="classpath"
                includeantruntime="false">
             <compilerarg value="-Xlint:-options"/>
+            <compilerarg value="-Xlint:-path"/>
         </javac>
     </target>
 

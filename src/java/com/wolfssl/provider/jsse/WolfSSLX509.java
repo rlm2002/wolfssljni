@@ -181,6 +181,7 @@ public class WolfSSLX509 extends X509Certificate {
         return this.cert.getSerial();
     }
 
+    @SuppressWarnings("deprecation")
     @Override
     public Principal getIssuerDN() {
 
@@ -194,6 +195,7 @@ public class WolfSSLX509 extends X509Certificate {
         return new WolfSSLPrincipal(name);
     }
 
+    @SuppressWarnings("deprecation")
     @Override
     public Principal getSubjectDN() {
 
@@ -678,7 +680,7 @@ public class WolfSSLX509 extends X509Certificate {
     }
 
 
-    @SuppressWarnings("removal")
+    @SuppressWarnings({"deprecation", "removal"})
     @Override
     protected void finalize() throws Throwable {
         try {

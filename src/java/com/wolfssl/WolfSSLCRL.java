@@ -880,7 +880,7 @@ public class WolfSSLCRL implements Serializable {
         }
     }
 
-    @SuppressWarnings("deprecation")
+    @SuppressWarnings({"deprecation", "removal"})
     @Override
     protected void finalize() throws Throwable {
         this.free();

@@ -1978,7 +1978,7 @@ public class WolfSSLEngineHelper {
         this.authStore = null;
     }
 
-    @SuppressWarnings("deprecation")
+    @SuppressWarnings({"deprecation", "removal"})
     @Override
     protected synchronized void finalize() throws Throwable {
 

@@ -2489,6 +2489,7 @@ public class WolfSSLEngineTest {
      * when no client auth requested, matching SunJSSE/Netty expectations.
      */
     @Test
+    @SuppressWarnings("removal")
     public void testGetPeerCertificateChainNoClientAuth() throws Exception {
 
         String protocol = null;

@@ -5910,7 +5910,7 @@ public class WolfSSLSession {
         }
     }
 
-    @SuppressWarnings("deprecation")
+    @SuppressWarnings({"deprecation", "removal"})
     @Override
     protected void finalize() throws Throwable
     {

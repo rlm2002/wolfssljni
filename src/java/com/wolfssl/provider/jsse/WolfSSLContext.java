@@ -621,7 +621,7 @@ public class WolfSSLContext extends SSLContextSpi {
         return this.ctx;
     }
 
-    @SuppressWarnings("deprecation")
+    @SuppressWarnings({"deprecation", "removal"})
     @Override
     protected void finalize() throws Throwable {
         if (this.ctx != null) {

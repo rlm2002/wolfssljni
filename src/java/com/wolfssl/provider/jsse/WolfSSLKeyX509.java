@@ -22,7 +22,6 @@
 package com.wolfssl.provider.jsse;
 
 import java.net.Socket;
-import java.security.AccessController;
 import java.security.KeyStore;
 import java.security.KeyStoreException;
 import java.security.Principal;
@@ -90,9 +89,11 @@ public class WolfSSLKeyX509 extends X509ExtendedKeyManager {
             () -> "creating new WolfSSLKeyX509 object");
 
         /* Check Security property once at construction time.
-         * Use doPrivileged for SecurityManager compatibility. */
+         * Use doPrivileged for SecurityManager compatibility.
+         * AccessController used via FQN to avoid import-line removal
+         * warning on JDK 17+. */
         @SuppressWarnings("removal")
-        String disableCacheValue = AccessController.doPrivileged(
+        String disableCacheValue = java.security.AccessController.doPrivileged(
             new PrivilegedAction<String>() {
                 public String run() {
                     return Security.getProperty(DISABLE_CACHE_PROPERTY);
@@ -215,6 +216,7 @@ public class WolfSSLKeyX509 extends X509ExtendedKeyManager {
      * null - if no alias matches found in KeyStore.
      * String[] - aliases, if found that match type and/or issuers
      */
+    @SuppressWarnings("deprecation")
     private String[] getAliasesFromKeyStore(String type, Principal[] issuers)
         throws KeyStoreException {
 
@@ -286,6 +288,7 @@ public class WolfSSLKeyX509 extends X509ExtendedKeyManager {
      * null - if no alias matches found.
      * String[] - aliases, if found that match type and/or issuers
      */
+    @SuppressWarnings("deprecation")
     private String[] getAliases(String type, Principal[] issuers) {
 
         /* Check if caching is disabled, use direct KeyStore access */
@@ -555,6 +558,7 @@ public class WolfSSLKeyX509 extends X509ExtendedKeyManager {
     /**
      * Clear sensitive data when object is garbage collected
      */
+    @SuppressWarnings({"deprecation", "removal"})
     @Override
     protected void finalize() throws Throwable {
         try {

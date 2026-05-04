@@ -613,6 +613,7 @@ public class WolfSSLImplementSSLSession extends ExtendedSSLSession {
         return km.getCertificateChain(authStore.getCertAlias());
     }
 
+    @SuppressWarnings("removal")
     @Override
     public synchronized javax.security.cert.X509Certificate[]
         getPeerCertificateChain() throws SSLPeerUnverifiedException {
@@ -1173,7 +1174,7 @@ public class WolfSSLImplementSSLSession extends ExtendedSSLSession {
         return Collections.emptyList();
     }
 
-    @SuppressWarnings("deprecation")
+    @SuppressWarnings({"deprecation", "removal"})
     @Override
     protected synchronized void finalize() throws Throwable
     {

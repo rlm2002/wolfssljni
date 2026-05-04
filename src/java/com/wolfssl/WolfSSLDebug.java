@@ -213,6 +213,7 @@ public class WolfSSLDebug {
             Level level = record.getLevel();
             String levelStr = (level != null) ? level.toString() : "UNKNOWN";
 
+            @SuppressWarnings("deprecation")
             long threadId = record.getThreadID();
             String message = record.getMessage();
             if (message == null) {
@@ -233,6 +234,7 @@ public class WolfSSLDebug {
      * JSON formatter for wolfSSL logs
      */
     private static class JSONFormatter extends Formatter {
+        @SuppressWarnings("deprecation")
         @Override
         public String format(LogRecord record) {
             if (record == null) {
