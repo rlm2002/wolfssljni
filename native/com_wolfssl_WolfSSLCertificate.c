@@ -1066,9 +1066,8 @@ JNIEXPORT jlong JNICALL Java_com_wolfssl_WolfSSLCertificate_X509_1load_1certific
 
     if (path != NULL) {
         x509 = wolfSSL_X509_load_certificate_file(path, format);
+        (*jenv)->ReleaseStringUTFChars(jenv, filename, path);
     }
-
-    (*jenv)->ReleaseStringUTFChars(jenv, filename, path);
 
     return (jlong)(uintptr_t)x509;
 #else
